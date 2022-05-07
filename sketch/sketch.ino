@@ -2,7 +2,9 @@
 #include <SD.h>
 #include <RTClib.h>
 
-#define PIN 4
+#define PIN 10
+#define COL_SIZE 20
+#define ERR_PIN 8
 
 // variable list ini utk menampung data yg ada di sd card
 String *list;
@@ -15,10 +17,41 @@ int pinBuzzer = 9;
 int beep = 3;
 
 RTC_DS1307 RTC;
+Sd2Card sd;
 
 char daysOfTheWeek[7][12] = {"Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"};
+bool isreading = false;
+char* scheduled_day;
+//String alarm_set[3];
 
-void alert(int count, int frequency, int wait) {
+// Deprecated (karena fungsi strtok() m'ubah nilai aslinya)
+void strsplit(char* result[], char str[], const char* delimiter)
+{
+  char* portion = strtok(str, delimiter);
+  int index = 0;
+  while (portion)
+  {
+    result[index] = portion;
+    index++;
+    portion = strtok(NULL, delimiter);
+  }
+  // result[index] = NULL;
+}
+
+void err_sign()
+{
+  int i = 0;
+  while (i < 3)
+  {
+    digitalWrite(ERR_PIN, HIGH);
+    delay(100);
+    digitalWrite(ERR_PIN, LOW);
+    delay(100);
+    i++;
+  }
+}
+
+void alert(int count, int frequency = 1000, int wait = 500) {
   int i = 0;
   // yg ini mah udh ngerti pasti
   // ga usah dijelasin lagi :-)
@@ -29,7 +62,7 @@ void alert(int count, int frequency, int wait) {
     delay(wait);
     i++;
   }
-  index++;
+//  index++;
 }
 
 String* find_schedule(char* buffer, const char* day)
@@ -39,7 +72,7 @@ String* find_schedule(char* buffer, const char* day)
   // string lemparan maksudnya parameter buffer pada fungsi ini :-)
   
   // angka 3 di variable list, adalah jumlah kolom yg ada di file csv (hari tdk termasuk)
-  static String list[3];
+  static String list[COL_SIZE];
   
   // variable counter dipake utk menyimpan data di kolom selanjutnya
   int counter = 0;
@@ -73,15 +106,6 @@ String* find_schedule(char* buffer, const char* day)
 
 String* read_csv(const char* path, const char* day)
 {
-  Serial.print("Initializing SD card... ");
-
-  if (!SD.begin(PIN))
-  {
-    Serial.println("FAILED!!!");
-    for (;;);
-  }
-
-  Serial.println("DONE.");
 
   if (!SD.exists(path))
   {
@@ -142,15 +166,35 @@ String* read_csv(const char* path, const char* day)
   return list;
 }
 
+void check_sd() 
+{
+  if (!sd.init(SPI_HALF_SPEED, PIN))
+  {
+    err_sign();
+//    alert(5, 3000, 300);
+  }
+}
+
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(57600);
-  pinMode(pinBuzzer, OUTPUT);
-
   while (!Serial)
   {
     ;
   }
+
+Begin:  
+  Serial.print("Initializing SD card... ");
+
+  if (!SD.begin(PIN))
+  {
+    Serial.println("FAILED!!!");
+    goto Begin;
+    // for (;;);
+  }
+
+  Serial.println("DONE.");
+  pinMode(pinBuzzer, OUTPUT);
 
   RTC.begin();
 
@@ -160,69 +204,98 @@ void setup() {
     RTC.adjust(DateTime(__DATE__, __TIME__));
   }
 
+//  RTC.adjust(DateTime(__DATE__, __TIME__));
+  
   list = NULL;
+//  alarm_set[0] = "00:07";
+//  alarm_set[1] = "00:08";
+//  alarm_set[2] = "00:09";
 
-  // 10:00->13:00->16:00->EMPTY
-//  list = read_csv("schedule.csv", "KAMIS");
-
-// kode ini utk kebutuhan development
+// kode di bawah ini hanya utk kebutuhan development
 // sengaja dikomentari
 // jgn dihapus ya...
+
+//  list = read_csv("schedule.csv", "Rabu");
+
 //  while (list[index] != "")
 //  {
-//    Serial.print(list[index] + "->");
+//    Serial.println(list[index]);
 //    index++;
 //  }
-//  Serial.println("EMPTY");
 }
 
-bool isreading = false;
-char* scheduled_day;
 
 void loop() {
   // put your main code here, to run repeatedly:
-//  Serial.println(list[index]);
 
   DateTime now = RTC.now();
 
   char* day = daysOfTheWeek[now.dayOfTheWeek()];
   unsigned char hour = now.hour();
   unsigned char minute = now.minute();
+  String jam = "0";
+  String menit = "0";
   String separator = ":";
-  String jam = (String)hour;
+  if (hour < 10) jam.concat(hour); else jam = (String)hour;
   jam.concat(separator);
-  jam.concat((String)minute);
+  if (minute < 10) menit.concat(minute); else menit = (String)minute;
+  jam.concat(menit);
 
+  // check if scheduled day is equal to current day
+  // if not, initialize scheduled day as current day
   if (scheduled_day != day)
   {
     scheduled_day = day;
     isreading = true;
   }
 
+  // read data from sd card only once per day
   if (isreading)
   {
-    list = read_csv("schedule.csv", "Minggu");
+    list = read_csv("schedule.csv", scheduled_day);
     isreading = false;
   }
 
+  // get scheduled time 
   String jam_sd;
-  if (list != NULL && list[index] != "") jam_sd = list[index];
+  String jml_bel;
+  if (list != NULL && list[index] != "")
+  {
+    char* result[2];
+    char str[8];
+    (list[index]).toCharArray(str, 8);
+    // split string
+    // from:
+    // (0) -> "08:00*3" 
+    // into: 
+    // (0) -> "08:00", (1) -> "3"
+    strsplit(result, str, "*");
+    
+    jam_sd = result[0];
+    jml_bel = result[1];
+  }
   
-  Serial.println(jam_sd);
+//  if (alarm_set[index] == jam)
   if (jam_sd == jam)
   {
-    alert(3, 1000, 500);
-//    index++; // udah ada di atas update indexnya setelah m'ambil fungsi alert
+//    Serial.print("Alarm ke ");
+//    Serial.print(index + 1);
+//    Serial.print(" berbunyi pada pukul ");
+//    Serial.print(jam);
+//    Serial.println();
+    
+    alert(jml_bel.toInt());
+    index++; 
   }
+  
+  check_sd();
 
 //  while (index < 5)
 //  {
+//    Serial.print(day);
+//    Serial.print(", ");
 //    Serial.println(jam);
 //    index++;
 //  }
   
-//  if (list[index] == "10:00")
-//  {
-//    alert(3, 1000, 500);
-//  }
 }
