@@ -8,16 +8,17 @@
 
 // variable list ini utk menampung data yg ada di sd card
 String *list;
+int listIndex = 0;
 
 // variable index fungsinya utk m'geser jam ke jam berikutnya, 
 // sesuai dgn yg ada di variable list
-int index = 0;
+//int index = 0;
 
 int pinBuzzer = 9;
 int beep = 3;
 
 RTC_DS1307 RTC;
-Sd2Card sd;
+//Sd2Card sd;
 
 char daysOfTheWeek[7][12] = {"Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"};
 bool isreading = false;
@@ -166,14 +167,14 @@ String* read_csv(const char* path, const char* day)
   return list;
 }
 
-void check_sd() 
-{
-  if (!sd.init(SPI_HALF_SPEED, PIN))
-  {
-    err_sign();
-//    alert(5, 3000, 300);
-  }
-}
+//void check_sd() 
+//{
+//  if (!sd.init(SPI_HALF_SPEED, PIN))
+//  {
+//    err_sign();
+////    alert(5, 3000, 300);
+//  }
+//}
 
 void setup() {
   // put your setup code here, to run once:
@@ -260,11 +261,11 @@ void loop() {
   // get scheduled time 
   String jam_sd;
   String jml_bel;
-  if (list != NULL && list[index] != "")
+  if (list != NULL && list[listIndex] != "")
   {
     char* result[2];
     char str[8];
-    (list[index]).toCharArray(str, 8);
+    (list[listIndex]).toCharArray(str, 8);
     // split string
     // from:
     // (0) -> "08:00*3" 
@@ -286,10 +287,10 @@ void loop() {
 //    Serial.println();
     
     alert(jml_bel.toInt());
-    index++; 
+    listIndex++; 
   }
   
-  check_sd();
+//  check_sd();
 
 //  while (index < 5)
 //  {
