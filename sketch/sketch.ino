@@ -14,7 +14,7 @@ int listIndex = 0;
 // sesuai dgn yg ada di variable list
 //int index = 0;
 
-int pinBuzzer = 9;
+int pinBuzzer = D4;
 int beep = 3;
 
 RTC_DS1307 RTC;
