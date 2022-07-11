@@ -25,7 +25,6 @@ bool isreading = false;
 char* scheduled_day;
 //String alarm_set[3];
 
-// Deprecated (karena fungsi strtok() m'ubah nilai aslinya)
 void strsplit(char* result[], char str[], const char* delimiter)
 {
   char* portion = strtok(str, delimiter);
