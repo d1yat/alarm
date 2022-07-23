@@ -14,7 +14,7 @@ int listIndex = 0;
 // sesuai dgn yg ada di variable list
 //int index = 0;
 
-int pinBuzzer = 9;
+int pinBuzzer = D4;
 int beep = 3;
 
 RTC_DS1307 RTC;
@@ -25,7 +25,6 @@ bool isreading = false;
 char* scheduled_day;
 //String alarm_set[3];
 
-// Deprecated (karena fungsi strtok() m'ubah nilai aslinya)
 void strsplit(char* result[], char str[], const char* delimiter)
 {
   char* portion = strtok(str, delimiter);
